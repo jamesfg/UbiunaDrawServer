@@ -29,6 +29,12 @@ io.sockets.on('connection', function(socket) {
       socket.emit('join-room-error', `Canvas code ${room} is invalid`)
     }
   });
+
+  socket.on('from-socket-update-room', function(roomInfoFromSocket) {
+    var foundRoomIndex = roomInfo.findIndex(room => room.room === roomInfoFromSocket.room);
+    roomInfo[foundRoomIndex] = roomInfoFromSocket;
+    io.to(roomInfoFromSocket.room).emit('update-room', roomInfoFromSocket);
+  });
 });
 
 
@@ -47,6 +53,8 @@ function createRoom(socket, username) {
       }],
       image: null
     }
+    console.log("this is the error ------------------");
+    console.error(roomInfo);
     roomInfo.push(currentRoom);
     io.to(newRoom).emit('update-room', currentRoom);
     console.log(`Created room: ${newRoom}`);
@@ -69,16 +77,19 @@ function joinRoom(socket, room, username) {
 };
 
 function disconnectFromRoom(socket) {
-  var foundsocket = null;
-  var foundRoom = roomInfo.find(function(roomElement) {
-     foundsocket = roomElement.sockets.find(function(socketElement) {
-      return socketElement.socket === socket.id;
+  if(roomInfo.length > 0) {
+    var foundsocket = null;
+    var foundRoom = roomInfo.find(function(roomElement) {
+        foundsocket = roomElement.sockets.find(function(socketElement) {
+        return socketElement.socket === socket.id;
+      });
+      return foundsocket;
     });
-    return foundsocket;
-  });
-  foundRoom.sockets.splice( foundRoom.sockets.indexOf(foundsocket), 1 )
-
-  io.to(foundRoom.room).emit('update-room', foundRoom);
+    if(foundsocket) {
+      foundRoom.sockets.splice( foundRoom.sockets.indexOf(foundsocket), 1 )
+      io.to(foundRoom.room).emit('update-room', foundRoom);
+    }
+  }
 }
 
 
